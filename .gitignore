@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.netlify/
+.npm-cache/
+.pydeps/
+*.log
+*.err
+*.out
+*.local
+.DS_Store

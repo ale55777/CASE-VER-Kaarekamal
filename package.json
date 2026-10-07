@@ -1,0 +1,22 @@
+{
+  "name": "kk-verification-forms",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1"
+  },
+  "dependencies": {
+    "@vitejs/plugin-react": "^5.0.4",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^3.0.3",
+    "vite": "^7.1.7",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "react-router-dom": "^7.9.4",
+    "lucide-react": "^0.545.0"
+  },
+  "devDependencies": {}
+}

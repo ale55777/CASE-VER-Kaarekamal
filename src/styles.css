@@ -548,15 +548,19 @@ button:disabled {
   position: absolute;
   z-index: 2;
   color: #111;
-  font-size: 18px;
-  line-height: 1.45;
+  font-size: var(--pdf-font-size, 18px);
+  line-height: var(--pdf-line-height, 1.15);
   white-space: pre-wrap;
   overflow: hidden;
+  overflow-wrap: anywhere;
+  transform: translateY(var(--pdf-value-lift, -6px));
+  padding: 0 2px;
 }
 
 .pdf-value.small {
-  font-size: 13px;
-  line-height: 1.25;
+  font-size: var(--pdf-font-size, 13px);
+  line-height: var(--pdf-line-height, 1.12);
+  transform: translateY(var(--pdf-value-lift, -4px));
 }
 
 .pdf-check {
@@ -564,11 +568,20 @@ button:disabled {
   z-index: 3;
   width: 18px;
   height: 18px;
-  font-size: 18px;
-  line-height: 18px;
-  font-weight: 900;
-  color: #111;
-  text-align: center;
+  transform: translate(1px, -1px);
+}
+
+.pdf-check::before {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 1px;
+  width: 7px;
+  height: 12px;
+  border: solid #111;
+  border-width: 0 3px 3px 0;
+  transform: rotate(42deg);
+  transform-origin: center;
 }
 
 @media (max-width: 760px) {

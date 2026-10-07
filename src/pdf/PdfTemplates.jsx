@@ -3,11 +3,46 @@ import { calculateCaseScore } from '../utils/formUtils.js';
 
 const ref = '/reference/';
 
+function getTextContent(value) {
+  if (value === null || value === undefined) return '';
+  if (Array.isArray(value)) return value.map(getTextContent).join('');
+  if (typeof value === 'string' || typeof value === 'number') return String(value);
+  if (typeof value === 'object' && 'props' in value) return getTextContent(value.props.children);
+  return '';
+}
+
+function getFitStyle({ text, w, h, small }) {
+  const cleanText = text.replace(/\s+/g, ' ').trim();
+  const baseFont = small ? 13 : 18;
+  const minFont = small ? 8 : 10;
+  const lineHeight = small ? 1.12 : 1.15;
+  const boxWidth = Math.max(1, (w / 100) * 800);
+  const boxHeight = Math.max(1, (h / 100) * 1060);
+  let fontSize = baseFont;
+
+  while (fontSize > minFont) {
+    const charsPerLine = Math.max(1, Math.floor(boxWidth / (fontSize * 0.58)));
+    const estimatedLines = Math.max(1, Math.ceil(cleanText.length / charsPerLine));
+    const maxLines = Math.max(1, Math.floor(boxHeight / (fontSize * lineHeight)));
+    if (estimatedLines <= maxLines) break;
+    fontSize -= 1;
+  }
+
+  return {
+    '--pdf-font-size': `${fontSize}px`,
+    '--pdf-line-height': lineHeight,
+    '--pdf-value-lift': h <= 2 ? '-8px' : h <= 3 ? '-6px' : '-4px',
+  };
+}
+
 function Value({ x, y, w, h, children, rtl = true, small = false }) {
+  const text = getTextContent(children);
+  const fitStyle = getFitStyle({ text, w, h, small });
+
   return (
     <div
       className={`pdf-value ${small ? 'small' : ''}`}
-      style={{ left: `${x}%`, top: `${y}%`, width: `${w}%`, minHeight: `${h}%` }}
+      style={{ left: `${x}%`, top: `${y}%`, width: `${w}%`, height: `${h}%`, ...fitStyle }}
       dir={rtl ? 'auto' : 'ltr'}
     >
       {children}
@@ -16,7 +51,7 @@ function Value({ x, y, w, h, children, rtl = true, small = false }) {
 }
 
 function Mark({ x, y, active }) {
-  return active ? <div className="pdf-check" style={{ left: `${x}%`, top: `${y}%` }}>✓</div> : null;
+  return active ? <div className="pdf-check" style={{ left: `${x}%`, top: `${y}%` }} /> : null;
 }
 
 function has(list, value) {

@@ -7,7 +7,7 @@ export default function App() {
       <section className="home-hero">
         <div className="brand-row">
           <div className="brand-mark">
-            <img src="/reference/Case_Verification_Form-1-1_page_1.png" alt="" />
+            <img src="/reference/image header.jpg" alt="Kaar-e-Kamal logo" />
           </div>
           <div>
             <p>Kaar-e-Kamal Welfare Foundation</p>

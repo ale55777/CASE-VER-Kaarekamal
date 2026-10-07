@@ -72,21 +72,21 @@ textarea {
 }
 
 .brand-mark {
-  width: 86px;
-  height: 86px;
+  width: 112px;
+  height: 112px;
   border-radius: 8px;
   overflow: hidden;
   background: white;
   box-shadow: var(--shadow);
-  position: relative;
+  display: grid;
+  place-items: center;
+  padding: 10px;
 }
 
 .brand-mark img {
-  position: absolute;
-  width: 230px;
-  height: auto;
-  left: -76px;
-  top: -8px;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .brand-row p,
@@ -607,13 +607,9 @@ button:disabled {
   }
 
   .brand-mark {
-    width: 70px;
-    height: 70px;
-  }
-
-  .brand-mark img {
-    width: 190px;
-    left: -64px;
+    width: 84px;
+    height: 84px;
+    padding: 8px;
   }
 
   .form-card {

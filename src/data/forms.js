@@ -78,6 +78,7 @@ export const initialRozgarData = {
   potential: { canSelfSustain: '', details: '' },
   verification: { chairmanName: '', referredBy: '', teamOpinion: '', verificationDate: '' },
   documents: { selected: [] },
+  attachments: [],
 };
 
 export const initialCaseData = {
@@ -109,6 +110,7 @@ export const initialCaseData = {
   appearance: { details: '' },
   verification: { teamMemberName: '', referredBy: '', createdBy: '', handedTo: '' },
   documents: { selected: [] },
+  attachments: [],
   scoring: Object.fromEntries(caseScoring.map((item) => [item.key, ''])),
 };
 

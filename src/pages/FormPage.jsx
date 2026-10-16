@@ -7,6 +7,7 @@ import { Review } from '../components/Review.jsx';
 import { caseDocumentOptions, caseNeedOptions, caseScoring, formConfigs, rozgarDocumentOptions, rozgarSupportOptions, skillOptions } from '../data/forms.js';
 import { CasePdfTemplate, RozgarPdfTemplate } from '../pdf/PdfTemplates.jsx';
 import { generatePdfFromElement } from '../pdf/generatePdf.js';
+import { generateCleanPdf } from '../pdf/generateCleanPdf.js';
 import { calculateCaseScore, isValidCnic, makeFilename, setNestedValue } from '../utils/formUtils.js';
 
 const yesNo = [
@@ -59,6 +60,9 @@ export default function FormPage() {
   const [errors, setErrors] = useState([]);
   const [pdfUrl, setPdfUrl] = useState('');
   const [filename, setFilename] = useState('');
+  const [pdfKind, setPdfKind] = useState('');
+  const [generating, setGenerating] = useState(false);
+  const [generationError, setGenerationError] = useState('');
   const pdfRef = useRef(null);
 
   if (!config) return <Navigate to="/" replace />;
@@ -75,18 +79,31 @@ export default function FormPage() {
     setStep((current) => Math.min(current + 1, steps.length));
   };
 
-  const generate = async () => {
+  const generate = async (kind = 'original') => {
     setErrors([]);
-    const doc = await generatePdfFromElement(pdfRef.current);
-    const blob = doc.output('blob');
-    if (pdfUrl) URL.revokeObjectURL(pdfUrl);
-    setPdfUrl(URL.createObjectURL(blob));
-    setFilename(makeFilename(formType, data));
+    setGenerationError('');
+    setGenerating(true);
+    try {
+      const doc = kind === 'clean'
+        ? await generateCleanPdf(formType, data)
+        : await generatePdfFromElement(pdfRef.current, data.attachments);
+      const blob = doc.output('blob');
+      if (pdfUrl) URL.revokeObjectURL(pdfUrl);
+      setPdfUrl(URL.createObjectURL(blob));
+      setFilename(kind === 'clean' ? makeFilename(formType, data).replace('.pdf', '_Clean.pdf') : makeFilename(formType, data));
+      setPdfKind(kind);
+    } catch (error) {
+      setGenerationError(error instanceof Error ? error.message : 'Unable to generate the PDF.');
+    } finally {
+      setGenerating(false);
+    }
   };
 
   const startNew = () => {
     clear();
     setPdfUrl('');
+    setPdfKind('');
+    setGenerationError('');
     setStep(0);
   };
 
@@ -125,10 +142,10 @@ export default function FormPage() {
         {generated ? (
           <div className="success-panel">
             <FileCheck size={48} />
-            <h2>PDF Generated Successfully</h2>
+            <h2>{pdfKind === 'clean' ? 'Clean PDF Generated Successfully' : 'PDF Generated Successfully'}</h2>
             <p>Your form data is still editable in this application.</p>
             <div className="button-row">
-              <a className="primary-button" href={pdfUrl} download={filename}><Download size={18} /> Download PDF</a>
+              <a className="primary-button" href={pdfUrl} download={filename}><Download size={18} /> Download {pdfKind === 'clean' ? 'Clean ' : ''}PDF</a>
               <button className="secondary-button" type="button" onClick={printPdf}><Printer size={18} /> Print</button>
               <button className="secondary-button" type="button" onClick={() => setPdfUrl('')}>Edit Form</button>
               <button className="text-button danger" type="button" onClick={startNew}><RotateCcw size={18} /> Start New Form</button>
@@ -139,12 +156,14 @@ export default function FormPage() {
           <div>
             <SectionTitle title="Confirm Details" intro="Review all entered information before generating the PDF." />
             <Review type={formType} data={data} />
+            <ImageAttachments data={data} setData={setData} />
             <div className="confirm-box">
               <strong>Is all information correct?</strong>
               <div className="button-row">
                 <button className="secondary-button" type="button" onClick={() => setStep(steps.length - 1)}>Go Back & Edit</button>
-                <button className="primary-button" type="button" onClick={generate}>Yes, Confirm & Generate PDF</button>
+                <button className="primary-button" type="button" disabled={generating} onClick={() => generate('clean')}>{generating && pdfKind === 'clean' ? 'Generating…' : 'Generate Clean PDF'}</button>
               </div>
+              {generationError && <div className="error-panel"><p>{generationError}</p></div>}
             </div>
           </div>
         ) : (
@@ -169,6 +188,54 @@ export default function FormPage() {
 
 function updatePath(setData, path, value) {
   setData((current) => setNestedValue(current, path, value));
+}
+
+function readAttachment(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const image = new Image();
+      image.onload = () => {
+        const maxSide = 1800;
+        const scale = Math.min(1, maxSide / Math.max(image.naturalWidth, image.naturalHeight));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+        canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+        canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height);
+        resolve({ name: file.name, data: canvas.toDataURL('image/jpeg', 0.82) });
+      };
+      image.onerror = reject;
+      image.src = reader.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+function ImageAttachments({ data, setData }) {
+  const attachments = data.attachments || [];
+  const addImages = async (event) => {
+    const files = [...event.target.files];
+    if (!files.length) return;
+    const newAttachments = await Promise.all(files.map(readAttachment));
+    updatePath(setData, 'attachments', [...attachments, ...newAttachments]);
+    event.target.value = '';
+  };
+  const removeImage = (index) => updatePath(setData, 'attachments', attachments.filter((_, itemIndex) => itemIndex !== index));
+
+  return (
+    <div className="attachment-box">
+      <SectionTitle title="Upload CNIC & Other Documents" intro="Take or choose as many document images as needed. They will be added as pages at the end of the PDF." />
+      <input type="file" accept="image/*" capture="environment" multiple onChange={addImages} />
+      {attachments.length > 0 && <div className="attachment-grid">{attachments.map((attachment, index) => (
+        <div className="attachment-card" key={`${attachment.name}-${index}`}>
+          <img src={attachment.data} alt={attachment.name} />
+          <span>{attachment.name}</span>
+          <button className="text-button danger" type="button" onClick={() => removeImage(index)}>Remove</button>
+        </div>
+      ))}</div>}
+    </div>
+  );
 }
 
 function rozgarSteps(data, setData) {

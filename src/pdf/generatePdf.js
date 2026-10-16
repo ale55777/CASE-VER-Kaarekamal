@@ -1,7 +1,8 @@
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
+import { appendImageAttachments } from './attachments.js';
 
-export async function generatePdfFromElement(element) {
+export async function generatePdfFromElement(element, attachments = []) {
   const pages = [...element.querySelectorAll('.pdf-page')];
   if (!pages.length) throw new Error('No PDF pages found');
 
@@ -24,5 +25,5 @@ export async function generatePdfFromElement(element) {
     pdf.addImage(image, 'JPEG', 0, 0, width, height);
   }
 
-  return pdf;
+  return appendImageAttachments(pdf, attachments);
 }

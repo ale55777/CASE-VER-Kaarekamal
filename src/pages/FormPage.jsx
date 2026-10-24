@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, Download, FileCheck, Printer, RotateCcw, Save } from 'lucide-react';
+import { ArrowLeft, Download, FileCheck, MessageCircle, Printer, RotateCcw, Save } from 'lucide-react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { CheckboxGroup, RadioGroup, SectionTitle, TextInput } from '../components/Fields.jsx';
 import { FamilyMemberTable } from '../components/FamilyMemberTable.jsx';
@@ -44,11 +44,11 @@ function validateStep(type, step, data) {
   if (type === 'case') {
     if (step === 0 && !data.applicant.familyHeadName) errors.push('Family head name is required.');
     if (step === 0 && data.applicant.cnic && !isValidCnic(data.applicant.cnic)) errors.push('CNIC must use 00000-0000000-0 format.');
-    if (step === 4 && caseScoring.some((item) => !data.scoring[item.key])) errors.push('Please answer all scoring questions.');
+    if (step === 2 && caseScoring.some((item) => !data.scoring[item.key])) errors.push('Please answer all scoring questions.');
   } else {
     if (step === 0 && !data.applicant.name) errors.push('Applicant name is required.');
     if (step === 0 && data.applicant.cnic && !isValidCnic(data.applicant.cnic)) errors.push('CNIC must use 00000-0000000-0 format.');
-    if (step === 4 && !data.potential.canSelfSustain) errors.push('Future potential yes/no answer is required.');
+    if (step === 2 && !data.potential.canSelfSustain) errors.push('Future potential yes/no answer is required.');
   }
   return errors;
 }
@@ -68,7 +68,7 @@ export default function FormPage() {
   if (!config) return <Navigate to="/" replace />;
 
   const { data, setData, savedAt, clear } = useDraft(config);
-  const steps = formType === 'case' ? caseSteps(data, setData) : rozgarSteps(data, setData);
+  const steps = formType === 'case' ? groupedCaseSteps(data, setData) : groupedRozgarSteps(data, setData);
   const reviewStep = step === steps.length;
   const generated = Boolean(pdfUrl);
 
@@ -144,8 +144,19 @@ export default function FormPage() {
             <FileCheck size={48} />
             <h2>{pdfKind === 'clean' ? 'Clean PDF Generated Successfully' : 'PDF Generated Successfully'}</h2>
             <p>Your form data is still editable in this application.</p>
+            <label className="filename-field">
+              <span>PDF file name</span>
+              <input
+                type="text"
+                value={filename}
+                onChange={(event) => setFilename(event.target.value.replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, '_'))}
+                aria-label="PDF file name"
+              />
+              <small>You can change the name before downloading. “.pdf” will be added automatically if needed.</small>
+            </label>
             <div className="button-row">
-              <a className="primary-button" href={pdfUrl} download={filename}><Download size={18} /> Download {pdfKind === 'clean' ? 'Clean ' : ''}PDF</a>
+              <a className="primary-button" href={pdfUrl} download={filename.toLowerCase().endsWith('.pdf') ? filename : `${filename || 'form'}.pdf`}><Download size={18} /> Download {pdfKind === 'clean' ? 'Clean ' : ''}PDF</a>
+              <a className="secondary-button whatsapp-button" href={`https://wa.me/?text=${encodeURIComponent(`I completed my ${config.title} form. PDF file: ${filename || 'form.pdf'}`)}`} target="_blank" rel="noreferrer"><MessageCircle size={18} /> Share to WhatsApp</a>
               <button className="secondary-button" type="button" onClick={printPdf}><Printer size={18} /> Print</button>
               <button className="secondary-button" type="button" onClick={() => setPdfUrl('')}>Edit Form</button>
               <button className="text-button danger" type="button" onClick={startNew}><RotateCcw size={18} /> Start New Form</button>
@@ -236,6 +247,29 @@ function ImageAttachments({ data, setData }) {
       ))}</div>}
     </div>
   );
+}
+
+function combineSteps(steps, groups) {
+  return groups.map(({ title, indexes }) => ({
+    title,
+    content: <>{indexes.map((index) => <div className="merged-step-section" key={steps[index].title}>{steps[index].content}</div>)}</>,
+  }));
+}
+
+function groupedRozgarSteps(data, setData) {
+  return combineSteps(rozgarSteps(data, setData), [
+    { title: 'Applicant & Family Details', indexes: [0, 1] },
+    { title: 'Family & Rozgar Plan', indexes: [2, 3] },
+    { title: 'Support, Verification & Documents', indexes: [4, 5] },
+  ]);
+}
+
+function groupedCaseSteps(data, setData) {
+  return combineSteps(caseSteps(data, setData), [
+    { title: 'Applicant & Household Details', indexes: [0, 1] },
+    { title: 'Family, Income & Documents', indexes: [2, 3] },
+    { title: 'Family Assessment', indexes: [4] },
+  ]);
 }
 
 function rozgarSteps(data, setData) {
